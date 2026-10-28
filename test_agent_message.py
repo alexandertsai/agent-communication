@@ -64,6 +64,34 @@ class BridgeTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     bridge.post_claude({"messagingSocketPath": str(alias)}, {})
 
+    def test_claude_name_registry(self):
+        live = {"sessionId": "me", "pid": 1, "name": "repo-1a", "nameSource": "derived", "messagingSocketPath": "/s"}
+        other = {"sessionId": "you", "pid": 2, "name": "pinned", "nameSource": "user", "messagingSocketPath": "/s"}
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.object(bridge, "NAMES", Path(directory) / "names.json"), \
+                patch.object(bridge, "sender", return_value={"session": "me"}), \
+                patch.object(bridge, "open_rollouts", return_value=set()), \
+                patch.object(bridge, "codex_sessions", return_value=[]), \
+                patch.object(bridge, "claude_sessions", side_effect=lambda: [dict(live, name=bridge.claude_names().get("me", "repo-1a")), other]):
+            bridge.name_claude("reviewer")
+            self.assertEqual(bridge.claude_names(), {"me": "reviewer"})
+            with self.assertRaises(ValueError):
+                bridge.name_claude("pinned")
+
+    def test_user_set_name_beats_registry(self):
+        rows = [{"sessionId": "a", "pid": 1, "name": "auto", "nameSource": "derived", "messagingSocketPath": "/s"},
+                {"sessionId": "b", "pid": 1, "name": "mine", "nameSource": "user", "messagingSocketPath": "/s"}]
+        with tempfile.TemporaryDirectory() as directory:
+            names = Path(directory) / "names.json"
+            names.write_text(json.dumps({"a": "reviewer", "b": "ignored"}))
+            for row in rows:
+                (Path(directory) / f'{row["sessionId"]}.json').write_text(json.dumps(row))
+            with patch.object(bridge, "NAMES", names), patch.object(bridge, "CLAUDE_HOME", Path(directory).parent), \
+                    patch.object(Path, "glob", return_value=[Path(directory) / "a.json", Path(directory) / "b.json"]), \
+                    patch.object(bridge.os, "kill"), patch.object(Path, "lstat") as lstat, patch.object(bridge.stat, "S_ISSOCK", return_value=True):
+                lstat.return_value.st_uid = bridge.os.getuid()
+                self.assertEqual([row["name"] for row in bridge.claude_sessions()], ["reviewer", "mine"])
+
 
 if __name__ == "__main__":
     unittest.main()

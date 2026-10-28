@@ -19,9 +19,18 @@ CLAUDE_HOME = Path(os.environ.get("CLAUDE_CONFIG_DIR", Path.home() / ".claude"))
 CODEX_HOME = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
 MAX_FRAME = 1_000_000
 MAX_MESSAGE_BYTES = 2000
+NAMES = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "agent-message/names.json"
+
+
+def claude_names():
+    try:
+        return json.loads(NAMES.read_text())
+    except (OSError, ValueError):
+        return {}
 
 
 def claude_sessions():
+    names = claude_names()
     sessions = []
     for path in (CLAUDE_HOME / "sessions").glob("*.json"):
         try:
@@ -29,6 +38,8 @@ def claude_sessions():
             os.kill(int(row["pid"]), 0)
             info = Path(row["messagingSocketPath"]).lstat()
             if stat.S_ISSOCK(info.st_mode) and info.st_uid == os.getuid():
+                if row.get("nameSource") == "derived" and names.get(row["sessionId"]):
+                    row["name"] = names[row["sessionId"]]
                 sessions.append(row)
         except (OSError, ValueError, KeyError, TypeError):
             continue
@@ -215,7 +226,7 @@ def app_server_rename(command, thread, name):
 def rename_codex(name):
     thread = os.environ.get("CODEX_THREAD_ID")
     if not thread:
-        raise ValueError("Not a Codex session. In Claude, use /rename or start with claude -n <name>.")
+        raise ValueError("Not a Codex session")
     commands = [["codex", "app-server", "--stdio"]]
     if (CODEX_HOME / "app-server-control/app-server-control.sock").exists():
         commands.insert(0, ["codex", "app-server", "proxy"])
@@ -229,11 +240,28 @@ def rename_codex(name):
     raise ValueError(f"Rename failed: {error}" if error else "Rename failed")
 
 
+def name_claude(name):
+    session = sender().get("session")
+    if not session:
+        raise ValueError("Not inside a Claude or Codex session")
+    active = open_rollouts()
+    taken = [row for row in claude_sessions() if row["sessionId"] != session and row.get("name") == name]
+    taken += [row for row in codex_sessions(10000) if row["name"] == name and row["rollout_path"] in active]
+    if taken:
+        raise ValueError(f"Name {name!r} is taken by an active session")
+    names = claude_names()
+    names[session] = name
+    NAMES.parent.mkdir(parents=True, exist_ok=True)
+    temp = NAMES.with_suffix(f".{os.getpid()}.tmp")
+    temp.write_text(json.dumps(names, indent=2))
+    os.replace(temp, NAMES)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("list", help="List active Claude and Codex sessions in the same project or repo")
-    commands.add_parser("name", help="Name the current Codex session").add_argument("name")
+    commands.add_parser("name", help="Name the current session").add_argument("name")
     for kind in ("claude", "codex"):
         command = commands.add_parser(kind, help=f"Send a message to {kind}")
         command.add_argument("target", help="Exact session ID or name; Claude also accepts PID")
@@ -246,7 +274,7 @@ def main():
         name = args.name.strip()
         if not name:
             raise ValueError("Name is empty")
-        rename_codex(name)
+        rename_codex(name) if os.environ.get("CODEX_THREAD_ID") else name_claude(name)
         print(f"Named {name}")
         return
     message = sys.stdin.read() if args.message == "-" else args.message
