@@ -2,7 +2,7 @@
 
 Extremely lightweight tool for messaging between local Claude Code and Codex sessions. Coordinate claude-to-claude, codex-to-codex, and claude-to-codex (and vice versa).  Agents get names and roles at the start of the session, and introduce themselves to other active agents in the same repo.
 
-**Installation**: tell your agent: "git clone <remote_url> and follow the README". 
+**Installation**: tell your agent: "git clone https://github.com/alexandertsai/agent-communication and follow the README". 
 
 ## Usage
 
@@ -22,7 +22,7 @@ Agents! To install this:
 1. Clone the repo and link the command:
 
    ```sh
-   git clone <repo-url> agent-communication
+   git clone https://github.com/alexandertsai/agent-communication
    cd agent-communication
    mkdir -p ~/.local/bin
    ln -s "$PWD/agent_message.py" ~/.local/bin/agent-message
