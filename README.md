@@ -2,7 +2,7 @@
 
 This repo allows (and encourages) local Claude, Codex, and Antigravity sessions within the same repo to talk to one another! You only need to install this once.
 
-To **install this**, tell your agent: "clone https://github.com/alexandertsai/agent-communication into a suitable folder and follow the README".
+To **install this**, tell your agent: "clone https://github.com/alexandertsai/agent-communication at a sensible location and follow the README".
 
 ## Installation For Agents
 
