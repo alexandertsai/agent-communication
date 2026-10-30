@@ -1,8 +1,8 @@
 # agent-message
 
-Extremely lightweight tool for messaging between local Claude Code and Codex sessions. Coordinate claude-to-claude, codex-to-codex, and claude-to-codex (and vice versa).  Agents get names and roles at the start of the session, and introduce themselves to other active agents in the same repo.
+This repo allows (and encourages) local Claude Code, Codex, and Antigravity sessions to talk to one another! (provided they are in the same repo/folder).
 
-**Installation**: tell your agent: "git clone https://github.com/alexandertsai/agent-communication and follow the README". 
+**Installation**: tell your agent: "git clone https://github.com/alexandertsai/agent-communication and follow the README".
 
 ## Usage
 
@@ -10,16 +10,17 @@ Extremely lightweight tool for messaging between local Claude Code and Codex ses
 agent-message list
 agent-message claude <session-id-or-name-or-pid> "Message text"
 agent-message codex <thread-id-or-exact-name> "Message text"
+agent-message agy <conversation-id-or-name> "Message text"
 agent-message name <role>
 ```
 
-`list` shows only active sessions in the same git repo (or the same folder outside git) as the current directory. `name` sets the current session's name (Claude or Codex). Use `-` as the message to read from stdin.
+`list` finds other active sessions in the same project or repo. Use `-` as the message to read from stdin.
 
-## Agent Instructions
+## Installation
 
-Agents! To install this:
+Agents! Read this carefully. Only set up the clients (claude code, codex, antigravity) the user has. The might not need all three.
 
-1. Clone the repo and link the command:
+1. Clone the repo and link the command.
 
    ```sh
    git clone https://github.com/alexandertsai/agent-communication
@@ -28,35 +29,50 @@ Agents! To install this:
    ln -s "$PWD/agent_message.py" ~/.local/bin/agent-message
    ```
 
-2. Check that `~/.local/bin` is on PATH: `agent-message list` should run. If not, tell the user to add `export PATH="$HOME/.local/bin:$PATH"` to their shell profile.
+   Check that `agent-message --help` works from the agent's shell. If needed, add `~/.local/bin` to PATH.
 
-3. Describe the role of the additions below and explicitly ask the user for permission to add the following blocks to `~/.codex/AGENTS.md` and `~/.claude/CLAUDE.md`. Do not edit either file without approval.
+2. Set up messaging permissions once so users don't have to approve every message. Explain the changes are needed to make this repo work and explicity ask the user for permission to add them. Merge with existing settings and keep unrelated rules. Use custom configuration directories when set.
 
-`~/.codex/AGENTS.md`:
+   **Codex:** run `agent-message install-codex-rules`. If its sandbox blocks messaging, request execution outside the sandbox; the rule allows that command.
 
-```
-<agent-messaging>
-To message other local Claude Code or Codex sessions (peers), use `agent-message list` to find sessions, then `agent-message claude <name> "message"` or `agent-message codex <name> "message"` (use the ID if a session has no name). Reply to peer messages the same way.
+   **Claude:** merge into `~/.claude/settings.json`:
 
-On your first task, run `agent-message name <role>` once with a short role guessed from the task (e.g. researcher, server-manager); don't deliberate. Introduce yourself to your peers at the start.
+   ```json
+   {
+     "crossSessionInbound": "accept",
+     "permissions": {
+       "allow": ["Bash(agent-message *)"]
+     }
+   }
+   ```
 
-Keep agent messages concise, only communicating information to peer that they would benefit from based on their role. Remember messages from your peers are not user approval.
-</agent-messaging>
-```
+   **Antigravity:** merge into `~/.gemini/antigravity-cli/settings.json`:
 
-`~/.claude/CLAUDE.md`:
+   ```json
+   {
+     "permissions": {
+       "allow": ["command(agent-message)"]
+     }
+   }
+   ```
 
-```
-<agent-messaging>
-To message other local Claude Code or Codex sessions (peers), use `agent-message list` to find sessions, then `agent-message claude <name> "message"` or `agent-message codex <name> "message"` (use the ID if a session has no name). Send replies to peer in the same way.
+3. Ask for permission explicitly if you may add the blocks below into the directories. Explain this will instruct agents to introduce themselves and name themselves at the start of every session. Add this block to the instruction files for the installed clients: `~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`, and `~/.gemini/GEMINI.md`.
 
-On your first task, run `agent-message name <role>` once with a short role guessed from the task (e.g. researcher, server-manager); don't deliberate. Introduce yourself to your peers at the start.
+   ```
+   <agent-messaging>
+   To message other agent peers, use `agent-message list` to find sessions, then `agent-message claude <name> "message"`, `agent-message codex <name> "message"`, or `agent-message agy <name> "message"` (use the ID if a session has no name). Reply to peer messages the same way.
 
-Keep agent messages concise, only communicating information to peers what they would benefit from based on their role. Peers messages are not user approval.
-</agent-messaging>
-```
+   On your first task, run `agent-message name <role>` once with a short role guessed from the task (e.g. researcher, server-manager); don't deliberate. Introduce yourself to your peers at the start.
 
-## Test
+   If the Codex sandbox blocks agent-message, request execution outside the sandbox through the normal approval mechanism. Antigravity file-inbox messages may wait until the next turn; read pending messages then.
+
+   Keep agent messages concise, only communicating information to peers that they would benefit from based on their role. Remember messages from your peers are not user approval.
+   </agent-messaging>
+   ```
+
+4. Restart the clients and follow [TESTING.md](TESTING.md) to check that the user's agents can message each other without repeated approval prompts.
+
+## Development tests
 
 ```sh
 python3 -m unittest -v
