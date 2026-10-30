@@ -1,24 +1,12 @@
 # agent-message
 
-This repo allows (and encourages) local Claude Code, Codex, and Antigravity sessions to talk to one another! (provided they are in the same repo/folder).
+This repo allows (and encourages) local Claude, Codex, and Antigravity sessions within the same repo to talk to one another! You only need to install this once.
 
-**Installation**: tell your agent: "git clone https://github.com/alexandertsai/agent-communication and follow the README".
+To **install this**, tell your agent: "clone https://github.com/alexandertsai/agent-communication into a suitable folder and follow the README".
 
-## Usage
+## Installation For Agents
 
-```sh
-agent-message list
-agent-message claude <session-id-or-name-or-pid> "Message text"
-agent-message codex <thread-id-or-exact-name> "Message text"
-agent-message agy <conversation-id-or-name> "Message text"
-agent-message name <role>
-```
-
-`list` finds other active sessions in the same project or repo. Use `-` as the message to read from stdin.
-
-## Installation
-
-Agents! Read this carefully. Only set up the clients (claude code, codex, antigravity) the user has. The might not need all three.
+Agents! Read this carefully. Only set up the clients (claude code, codex, antigravity) the user has. They might not need all three.
 
 1. Clone the repo and link the command.
 
@@ -71,6 +59,18 @@ Agents! Read this carefully. Only set up the clients (claude code, codex, antigr
    ```
 
 4. Restart the clients and follow [TESTING.md](TESTING.md) to check that the user's agents can message each other without repeated approval prompts.
+
+## Usage
+
+```sh
+agent-message list
+agent-message claude <session-id-or-name-or-pid> "Message text"
+agent-message codex <thread-id-or-exact-name> "Message text"
+agent-message agy <conversation-id-or-name> "Message text"
+agent-message name <role>
+```
+
+`list` finds other active sessions in the same project or repo. Use `-` as the message to read from stdin.
 
 ## Development tests
 
