@@ -263,9 +263,9 @@ def codex_env():
 def resolve_codex(target):
     active = open_rollouts()
     matches = [row for row in codex_sessions(10000) if target in (row["id"], row["name"]) and row["rollout_path"] in active]
-    if len(matches) > 1:
+    if len(matches) != 1:
         raise ValueError(f"Expected one Codex session for {target!r}; found {len(matches)}. Run agent-message list.")
-    return matches[0]["id"] if matches else target
+    return matches[0]["id"]
 
 
 def send_codex(target, message):

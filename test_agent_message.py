@@ -254,6 +254,27 @@ class BridgeTests(unittest.TestCase):
         rows = [{"id": "old", "name": "w", "rollout_path": "/old"}, {"id": "new", "name": "w", "rollout_path": "/new"}]
         with patch.object(bridge, "codex_sessions", return_value=rows), patch.object(bridge, "open_rollouts", return_value={"/new"}):
             self.assertEqual(bridge.resolve_codex("w"), "new")
+            self.assertEqual(bridge.resolve_codex("new"), "new")
+
+    def test_codex_rejects_inactive_and_unknown_targets_before_delivery(self):
+        rows = [{"id": "old", "name": "previous", "rollout_path": "/old"}]
+        for target in ("old", "previous", "unknown"):
+            with self.subTest(target=target), \
+                    patch.object(bridge.sys, "argv", ["agent-message", "codex", target, "hello"]), \
+                    patch.object(bridge, "sender", return_value={"name": "sender"}), \
+                    patch.object(bridge, "codex_sessions", return_value=rows), \
+                    patch.object(bridge, "open_rollouts", return_value=set()), \
+                    patch.object(bridge, "send_codex") as send:
+                with self.assertRaisesRegex(ValueError, "found 0"):
+                    bridge.main()
+                send.assert_not_called()
+
+    def test_resolve_codex_rejects_ambiguous_active_name(self):
+        rows = [{"id": "one", "name": "worker", "rollout_path": "/one"}, {"id": "two", "name": "worker", "rollout_path": "/two"}]
+        with patch.object(bridge, "codex_sessions", return_value=rows), \
+                patch.object(bridge, "open_rollouts", return_value={"/one", "/two"}):
+            with self.assertRaisesRegex(ValueError, "found 2"):
+                bridge.resolve_codex("worker")
 
     def test_rename_codex_rejects_active_duplicate(self):
         rows = [{"id": "me", "name": "me", "rollout_path": "/me"}, {"id": "other", "name": "worker", "rollout_path": "/other"}]
